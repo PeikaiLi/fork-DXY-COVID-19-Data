@@ -49,12 +49,14 @@ collections = {
     'DXYOverall': 'overall',
     'DXYArea': 'area',
     'DXYNews': 'news',
-    'DXYRumors': 'rumors'
+    'DXYRumors': 'rumors',
+    'DXYArea_f': 'area_with_Asymptomatic'
 }
 
 files = (
     'csv/DXYOverall.csv', 'csv/DXYArea.csv', 'csv/DXYNews.csv', 'csv/DXYRumors.csv',
-    'json/DXYOverall.json', 'json/DXYArea.json', 'json/DXYNews.json', 'json/DXYRumors.json'
+    'json/DXYOverall.json', 'json/DXYArea.json', 'json/DXYNews.json', 'json/DXYRumors.json',
+    'csv/DXYArea_f.csv', 'json/DXYArea_f.json'
 )
 
 time_types = ('pubDate', 'createTime', 'modifyTime', 'dataInfoTime', 'crawlTime', 'updateTime')
@@ -158,6 +160,24 @@ class Listener:
                 # os.path.split(os.path.realpath(__file__))[0] 当前文件夹 == pwd
                 index=False, encoding='utf_8_sig', float_format="%i"
             )
+        elif collection == 'DXYArea_f':
+            structured_results = list()
+            for document in cursor:
+                if document.get('cities', None):
+                    for city_counter in range(len(document['cities'])):
+                        city_dict = document['cities'][city_counter]
+                        structured_results.append(self.dict_parser_Asym(document=document, city_dict=city_dict))
+                else:
+                    structured_results.append(self.dict_parser_Asym(document=document))
+
+            df = pd.DataFrame(structured_results)
+            df.to_csv(
+                path_or_buf=os.path.join(
+                    os.path.split(os.path.realpath(__file__))[0], 'csv', collection + '.csv'),
+                index=False, encoding='utf_8_sig', float_format="%i"
+            )
+
+
         elif collection == 'DXYOverall':
             df = pd.DataFrame(data=cursor)
             for time_type in time_types:
@@ -189,14 +209,15 @@ class Listener:
         if collection != 'DXYArea':
             for document in cursor:
                 document.pop('_id')
-                if document.get('comment'):
-                    document.pop('comment')
+                # if document.get('comment'):
+                #     document.pop('comment')
                 data.append(document)
         else:
             for document in cursor:
                 document.pop('_id')
-                document.pop('statisticsData', None)
-                document.pop('showRank', None)
+                # 下面 key 不存在时，pop 返回 None
+                document.pop('statisticsData', None) # statisticsData 是省level 的历史记录
+                document.pop('showRank', None) 
                 document.pop('operator', None)
                 data.append(document)
 
@@ -231,19 +252,77 @@ class Listener:
         result['provinceName'] = document['provinceName']
         result['provinceEnglishName'] = document.get('provinceEnglishName')
         result['province_zipCode'] = document.get('locationId')
+        result['province_currentConfirmedCount'] = document['currentConfirmedCount']
         result['province_confirmedCount'] = document['confirmedCount']
         result['province_suspectedCount'] = document['suspectedCount']
         result['province_curedCount'] = document['curedCount']
         result['province_deadCount'] = document['deadCount']
+
+        result['province_comment'] = document.get('comment')
+        result['province_highDangerCount'] = document.get('highDangerCount')      
+        result['province_midDangerCount'] = document.get('midDangerCount')
+        result['province_detectOrgCount'] = document.get('detectOrgCount')               
+        result['province_vaccinationOrgCount'] = document.get('vaccinationOrgCount')          
+ 
+
+        if city_dict:
+            result['cityName'] = city_dict['cityName']
+            result['cityEnglishName'] = city_dict.get('cityEnglishName')
+            result['city_zipCode'] = city_dict.get('locationId')
+            result['city_currentConfirmedCount'] = city_dict['currentConfirmedCount']
+            result['city_confirmedCount'] = city_dict['confirmedCount']
+            result['city_suspectedCount'] = city_dict['suspectedCount']
+            result['city_curedCount'] = city_dict['curedCount']
+            result['city_deadCount'] = city_dict['deadCount']
+            result['city_highDangerCount'] = city_dict.get('highDangerCount') 
+            result['city_midDangerCount'] = city_dict.get('midDangerCount')
+            
+            
+        result['updateTime'] = datetime.datetime.fromtimestamp(int(document['updateTime']/1000))
+
+        return result
+    
+    @staticmethod
+    def dict_parser_Asym(document: dict, city_dict: dict = None) -> dict:
+        result = dict()
+
+        try:
+            result['continentName'] = document['continentName']
+            result['continentEnglishName'] = document['continentEnglishName']
+        except KeyError:
+            result['continentName'] = None
+            result['continentEnglishName'] = None
+
+        result['countryName'] = document['countryName']
+
+        try:
+            result['countryEnglishName'] = document['countryEnglishName']
+        except KeyError:
+            result['countryEnglishName'] = None
+
+        result['provinceName'] = document['provinceName']
+        result['provinceEnglishName'] = document.get('provinceEnglishName')
+        result['province_zipCode'] = document.get('locationId')
+        result['province_confirmedCount'] = document['confirmedCount']
+        # result['province_suspectedCount'] = document['suspectedCount']
+        result['province_yesterdayLocalConfirmedCount'] = document['yesterdayLocalConfirmedCount']
+        result['province_yesterdayAsymptomaticCount'] = document['yesterdayAsymptomaticCount']
+        result['province_currentConfirmedCount'] = document['currentConfirmedCount']
+        result['province_dangerCountIncr'] = document['dangerCountIncr']
+        result['province_currentDangerCount'] = document['currentDangerCount']
+ 
 
         if city_dict:
             result['cityName'] = city_dict['cityName']
             result['cityEnglishName'] = city_dict.get('cityEnglishName')
             result['city_zipCode'] = city_dict.get('locationId')
             result['city_confirmedCount'] = city_dict['confirmedCount']
-            result['city_suspectedCount'] = city_dict['suspectedCount']
-            result['city_curedCount'] = city_dict['curedCount']
-            result['city_deadCount'] = city_dict['deadCount']
+            # result['city_suspectedCount'] = city_dict['suspectedCount']
+            result['city_yesterdayLocalConfirmedCount'] = city_dict['yesterdayLocalConfirmedCount']
+            result['city_yesterdayAsymptomaticCount'] = city_dict['yesterdayAsymptomaticCount']
+            result['city_currentConfirmedCount'] = city_dict['currentConfirmedCount']
+            result['city_dangerCountIncr'] = city_dict['dangerCountIncr']
+            result['city_currentDangerCount'] = city_dict['currentDangerCount']
 
         result['updateTime'] = datetime.datetime.fromtimestamp(int(document['updateTime']/1000))
 
