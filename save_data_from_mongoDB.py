@@ -8,8 +8,8 @@
 """
 
 
-# from github3 import login
-# from dotenv import load_dotenv
+from github3 import login
+from dotenv import load_dotenv
 from pymongo import MongoClient
 import os
 import json
@@ -20,7 +20,7 @@ import pandas as pd
 
 
 # Load environment parameters
-# load_dotenv()
+load_dotenv()  # 补充一些环境变量 从 .env 文件里面
 
 
 working_on = False
@@ -36,7 +36,12 @@ logger = logging.getLogger(__name__)
 
 # Database connection
 # uri = 'localhost:27017'
-# client = MongoClient(uri) 
+# client = MongoClient(uri)
+# MongoClient(None) == MongoClient() == MongoClient('localhost:27017')
+# if os.getenv('MONGO_URI') == None：
+#  --> MongoClient(os.getenv('MONGO_URI')) == MongoClient(None)
+# else:
+    # type(os.getenv('MONGO_URI')) == <class 'str'>
 client = MongoClient(os.getenv('MONGO_URI'))
 db = client['2019-nCoV']
 
@@ -92,31 +97,34 @@ class Listener:
                 ).total_seconds()
             )
 
-    # @staticmethod
-    # def github_manager():
-    #     # GitHub connection
-    #     github = login(token=os.getenv('GITHUB_TOKEN'))
-    #     github.session.default_read_timeout = 20
-    #     github.session.default_connect_timeout = 20
+    @staticmethod
+    def github_manager():
+        """
+        一个把从mongo导出的数据发布到github的函数，我们不需要
+        """
+        # GitHub connection
+        github = login(token=os.getenv('GITHUB_TOKEN'))
+        github.session.default_read_timeout = 20
+        github.session.default_connect_timeout = 20
 
-    #     repository = github.repository(owner='BlankerL', repository='DXY-COVID-19-Data')
-    #     release = repository.create_release(
-    #         tag_name='{tag_name}'.format(
-    #             tag_name=datetime.datetime.today().strftime('%Y.%m.%d')
-    #         )
-    #     )
-    #     for file in files:
-    #         logger.info('Uploading: ' + file.split('/')[-1])
-    #         release.upload_asset(
-    #             content_type='application/text',
-    #             name=file.split('/')[-1],
-    #             asset=open(
-    #                 file=os.path.join(
-    #                     os.path.split(os.path.realpath(__file__))[0], file
-    #                 ),
-    #                 mode='rb'
-    #             )
-    #         )
+        repository = github.repository(owner='BlankerL', repository='DXY-COVID-19-Data')
+        release = repository.create_release(
+            tag_name='{tag_name}'.format(
+                tag_name=datetime.datetime.today().strftime('%Y.%m.%d')
+            )
+        )
+        for file in files:
+            logger.info('Uploading: ' + file.split('/')[-1])
+            release.upload_asset(
+                content_type='application/text',
+                name=file.split('/')[-1],
+                asset=open(
+                    file=os.path.join(
+                        os.path.split(os.path.realpath(__file__))[0], file
+                    ),
+                    mode='rb'
+                )
+            )
 
     def updater(self):
         for collection in collections:
