@@ -84,17 +84,18 @@ class DB:
 
 
 class Listener:
-    def __init__(self):
+    def __init__(self, just_run_once = True):
         self.db = DB()
+        self.just_run_once = just_run_once
 
     def run(self):
         while True:
             self.updater()
-            if not working_on:
+            if self.just_run_once:
                 break
             time.sleep(
                 (
-                    # Update every 24 hours
+                    # Update every data 00点00分00秒
                     datetime.timedelta(hours=24) - (datetime.datetime.now() - datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0))
                 ).total_seconds()
             )
@@ -305,9 +306,9 @@ class Listener:
         result['province_zipCode'] = document.get('locationId')
         result['province_confirmedCount'] = document['confirmedCount']
         # result['province_suspectedCount'] = document['suspectedCount']
-        result['province_yesterdayLocalConfirmedCount'] = document['yesterdayLocalConfirmedCount']
-        result['province_yesterdayAsymptomaticCount'] = document['yesterdayAsymptomaticCount']
-        result['province_currentConfirmedCount'] = document['currentConfirmedCount']
+        result['province_yesterdayLocalConfirmedCount'] = document.get('yesterdayLocalConfirmedCount')
+        result['province_yesterdayAsymptomaticCount'] = document.get('yesterdayAsymptomaticCount')
+        result['province_currentConfirmedCount'] = document.get('currentConfirmedCount')
         result['province_dangerCountIncr'] = document['dangerCountIncr']
         result['province_currentDangerCount'] = document['currentDangerCount']
  
@@ -318,8 +319,8 @@ class Listener:
             result['city_zipCode'] = city_dict.get('locationId')
             result['city_confirmedCount'] = city_dict['confirmedCount']
             # result['city_suspectedCount'] = city_dict['suspectedCount']
-            result['city_yesterdayLocalConfirmedCount'] = city_dict['yesterdayLocalConfirmedCount']
-            result['city_yesterdayAsymptomaticCount'] = city_dict['yesterdayAsymptomaticCount']
+            result['city_yesterdayLocalConfirmedCount'] = city_dict.get('yesterdayLocalConfirmedCount')
+            result['city_yesterdayAsymptomaticCount'] = city_dict.get('yesterdayAsymptomaticCount')
             result['city_currentConfirmedCount'] = city_dict['currentConfirmedCount']
             result['city_dangerCountIncr'] = city_dict['dangerCountIncr']
             result['city_currentDangerCount'] = city_dict['currentDangerCount']
