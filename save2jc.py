@@ -145,14 +145,27 @@ class Listener:
 
     def csv_dumper(self, collection: str, cursor):
         if collection == 'DXYArea':
+            
+            structured_area_results = list()
             structured_results = list()
+            
             for document in cursor:
+                # datas
                 if document.get('cities', None):
                     for city_counter in range(len(document['cities'])):
                         city_dict = document['cities'][city_counter]
                         structured_results.append(self.dict_parser(document=document, city_dict=city_dict))
                 else:
                     structured_results.append(self.dict_parser(document=document))
+                    
+                        # 对于有城市的
+                if document.get('dangerAreas', None):
+                    if document['dangerAreas']:       
+                        for dangerAreas_counter in range(len(document['dangerAreas'])):
+                            dangerAreas_dict = document['dangerAreas'][dangerAreas_counter]
+                            structured_area_results.append(self.dict_dangerAreas(document=document, dangerAreas_dict=dangerAreas_dict))
+        
+
 
             df = pd.DataFrame(structured_results)
             df.to_csv(
@@ -161,6 +174,17 @@ class Listener:
                 # os.path.split(os.path.realpath(__file__))[0] 当前文件夹 == pwd
                 index=False, encoding='utf_8_sig', float_format="%i"
             )
+            
+            
+            df = pd.DataFrame(structured_area_results)
+            df.to_csv(
+                path_or_buf=os.path.join(
+                    os.path.split(os.path.realpath(__file__))[0], 'csv', collection + '_dangerAreas.csv'),
+                # os.path.split(os.path.realpath(__file__))[0] 当前文件夹 == pwd
+                index=False, encoding='utf_8_sig', float_format="%i"
+            )
+
+
         elif collection == 'DXYArea_f':
             structured_results = list()
             for document in cursor:
@@ -282,6 +306,31 @@ class Listener:
         result['updateTime'] = datetime.datetime.fromtimestamp(int(document['updateTime']/1000))
 
         return result
+    
+    
+    @staticmethod
+    def dict_dangerAreas(document: dict, dangerAreas_dict: dict = None) -> dict:
+        
+       result = dict()
+       result['provinceName'] = document['provinceName']
+       result['provinceEnglishName'] = document.get('provinceEnglishName')
+       result['province_zipCode'] = document.get('locationId')
+      
+
+       result['province_highDangerCount'] = document.get('highDangerCount')      
+       result['province_midDangerCount'] = document.get('midDangerCount')
+
+
+       if dangerAreas_dict:
+           result['cityName'] = dangerAreas_dict['cityName']
+           result['areaName'] = dangerAreas_dict['areaName']
+           result['dangerLevel'] = dangerAreas_dict['dangerLevel']
+
+           
+       result['updateTime'] = datetime.datetime.fromtimestamp(int(document['updateTime']/1000))
+
+       return result
+    
     
     @staticmethod
     def dict_parser_Asym(document: dict, city_dict: dict = None) -> dict:

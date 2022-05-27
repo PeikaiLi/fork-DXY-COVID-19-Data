@@ -65,16 +65,36 @@ def dict_parser(document: dict, city_dict: dict = None) -> dict:
        return result
 
 
-if __name__ == "__main__":
-    
-    with open("datas/DXYArea.json",'r',encoding = "utf-8") as load_f:
-        history_dict = json.load(load_f)
-        
-    print(type(history_dict))
-    
- 
+def dict_dangerAreas(document: dict, dangerAreas_dict: dict = None) -> dict:
+       result = dict()
+
+
+       result['provinceName'] = document['provinceName']
+       result['provinceEnglishName'] = document.get('provinceEnglishName')
+       result['province_zipCode'] = document.get('locationId')
+      
+
+       result['province_highDangerCount'] = document.get('highDangerCount')      
+       result['province_midDangerCount'] = document.get('midDangerCount')
+
+
+       if dangerAreas_dict:
+           result['cityName'] = dangerAreas_dict['cityName']
+           result['areaName'] = dangerAreas_dict['areaName']
+           result['dangerLevel'] = dangerAreas_dict['dangerLevel']
+
+           
+       result['updateTime'] = datetime.datetime.fromtimestamp(int(document['updateTime']/1000))
+
+       return result
+
+
+
+def historyj2c(history_dict):      
     structured_results = list()
     for document in tqdm(history_dict):
+
+        # 对于有城市的
         if document.get('cities', None):
             for city_counter in range(len(document['cities'])):
                 city_dict = document['cities'][city_counter]
@@ -85,7 +105,37 @@ if __name__ == "__main__":
     df = pd.DataFrame(structured_results)
     df.to_csv(
         path_or_buf=os.path.join(
-            os.path.split(os.path.realpath(__file__))[0], 'history_dict' + '.csv'),
+            os.path.split(os.path.realpath(__file__))[0], 'history_datas' + '.csv'),
         # os.path.split(os.path.realpath(__file__))[0] 当前文件夹 == pwd
         index=False, encoding='utf_8_sig', float_format="%i"
         )
+
+
+def history_dangerAreas(history_dict):
+    structured_area_results = list()
+    for document in tqdm(history_dict):
+
+        # 对于有城市的
+        if document.get('dangerAreas', None):
+            if document['dangerAreas']:       
+                for dangerAreas_counter in range(len(document['dangerAreas'])):
+                    dangerAreas_dict = document['dangerAreas'][dangerAreas_counter]
+                    structured_area_results.append(dict_dangerAreas(document=document, dangerAreas_dict=dangerAreas_dict))
+
+
+    df = pd.DataFrame(structured_area_results)
+    df.to_csv(
+        path_or_buf=os.path.join(
+            os.path.split(os.path.realpath(__file__))[0], 'history_dangerAreas' + '.csv'),
+        # os.path.split(os.path.realpath(__file__))[0] 当前文件夹 == pwd
+        index=False, encoding='utf_8_sig', float_format="%i"
+        )
+
+
+if __name__ == "__main__":
+    with open("datas/DXYArea1.json",'r',encoding = "utf-8") as load_f:
+        history_dict = json.load(load_f)
+        
+    print(type(history_dict))
+    historyj2c(history_dict)
+    history_dangerAreas(history_dict)
